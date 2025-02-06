@@ -1,6 +1,6 @@
 {
   "name": "magentix/magento-php-api-client",
-  "description": "PHP Magento API Client",
+  "description": "Simple PHP Magento API Client",
   "require": {
     "php": ">=8",
     "ext-curl": "*",

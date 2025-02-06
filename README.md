@@ -1,5 +1,7 @@
 # Simple PHP Magento API Client
 
+One class without dependency
+
 ## Installation
 
 ```shell

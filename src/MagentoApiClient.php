@@ -26,8 +26,6 @@ declare(strict_types=1);
 
 namespace Magentix\MagentoApiClient;
 
-use Exception;
-
 class MagentoApiClient
 {
     public function __construct(
@@ -129,18 +127,12 @@ class MagentoApiClient
 
     protected function getNonce(): string
     {
-        try {
-            return bin2hex(random_bytes(16));
-        } catch (Exception) {
-            return md5(uniqid((string)rand(), true));
-        }
+        return md5(uniqid((string)rand(), true));
     }
 
     protected function urlEncode($value): string
     {
-        $encoded = rawurlencode((string) $value);
-
-        return str_replace('%7E', '~', $encoded);
+        return str_replace('%7E', '~', rawurlencode((string)$value));
     }
 
     protected function toByteValueOrderedQueryString(array $params): string
