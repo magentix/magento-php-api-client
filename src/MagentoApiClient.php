@@ -28,8 +28,8 @@ namespace Magentix\MagentoApiClient;
 
 use Exception;
 
-class MagentoApiClient {
-
+class MagentoApiClient
+{
     public function __construct(
         private string $consumerKey,
         private string $consumerSecret,
