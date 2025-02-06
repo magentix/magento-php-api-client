@@ -83,7 +83,7 @@ $client->put($url, $data);
 ### POST
 
 ```php
-$url = 'http://localhost.magento/index.php/rest/all/V1/products';
+$url = 'https://www.example.com/index.php/rest/all/V1/products';
 $data = [
     'product' => [
         'sku' => 'SKU0001',
