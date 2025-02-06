@@ -28,27 +28,15 @@ $client = new \Magentix\MagentoApiClient\MagentoApiClient(
 );
 ```
 
+### GET
+
 ```php
-$method = 'GET';
 $url = 'https://www.example.com/index.php/rest/all/V1/products/SKU0001';
 
-$client->request($method, $url);
+$client->get($url);
 ```
 
 ```php
-$method = 'PUT';
-$url = 'https://www.example.com/index.php/rest/all/V1/products/SKU0001';
-$body = [
-    'product' => [
-        'name' => 'My Product',
-    ]
-];
-
-$client->request($method, $url, $body);
-```
-
-```php
-$method = 'GET';
 $url = 'https://www.example.com/index.php/rest/all/V1/products';
 $params = [
     'searchCriteria' => [
@@ -65,7 +53,64 @@ $params = [
         ]
     ]
 ];
-$body = [];
 
-$client->request($method, $url, $body, $params);
+$client->get($url, $params);
+```
+
+### DELETE
+
+```php
+$url = 'https://www.example.com/index.php/rest/all/V1/products/SKU0001';
+
+$client->delete($url);
+```
+
+### PUT
+
+```php
+$url = 'https://www.example.com/index.php/rest/all/V1/products/SKU0001';
+$data = [
+    'product' => [
+        'name' => 'My Product',
+    ]
+];
+
+$client->put($url, $data);
+```
+
+### POST
+
+```php
+$url = 'http://localhost.magento/index.php/rest/all/V1/products';
+$data = [
+    'product' => [
+        'sku' => 'SKU0001',
+        'name' => 'My Product',
+        'price' => '10.00',
+        'attribute_set_id' => 4,
+        'status' => 1,
+        'visibility' => 4,
+        'type_id' => 'simple',
+        'weight' => 0.1,
+        'extension_attributes' => [
+            'website_ids' => [1],
+            'stock_item' => [
+                'qty' => 100,
+                'is_in_stock' => true,
+            ]
+        ],
+        'custom_attributes' => [
+            [
+                'attribute_code' => 'url_key',
+                'value' => 'my-product',
+            ],
+            [
+                'attribute_code' => 'category_ids',
+                'value' => [4],
+            ]
+        ]
+    ]
+];
+
+$client->post($url, $data);
 ```
