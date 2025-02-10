@@ -53,7 +53,8 @@ $params = [
                 ]
             ]
         ]
-    ]
+    ],
+    'fields' => 'items[id,name,custom_attributes]',
 ];
 
 $client->get($url, $params);
