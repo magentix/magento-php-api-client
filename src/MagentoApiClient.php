@@ -26,13 +26,16 @@ declare(strict_types=1);
 
 namespace Magentix\MagentoApiClient;
 
+use Magentix\MagentoApiClient\Interface\Cache;
+
 class MagentoApiClient
 {
     public function __construct(
         private string $consumerKey,
         private string $consumerSecret,
         private string $accessToken,
-        private string $accessTokenSecret
+        private string $accessTokenSecret,
+        private ?Cache $cache = null
     ) {
     }
 
@@ -60,6 +63,14 @@ class MagentoApiClient
     {
         $method = strtoupper($method);
 
+        if ($this->canCache($method)) {
+            $cacheKey = sha1(serialize([$method, $url, $body, $params]));
+            $cached = $this->cache->get($cacheKey);
+            if ($cached) {
+                return $cached;
+            }
+        }
+
         $options = [
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_RETURNTRANSFER => 1,
@@ -84,12 +95,29 @@ class MagentoApiClient
             return ['error' => true, 'result' => curl_error($curl)];
         }
 
-        $result = json_decode($response, true);
+        $data = json_decode($response, true);
 
-        return [
+        $result = [
             'error' => curl_getinfo($curl, CURLINFO_HTTP_CODE) !== 200,
-            'result' => is_array($result) ? $result : $response,
+            'result' => is_array($data) ? $data : $response,
         ];
+
+        if ($this->canCache($method) && isset($cacheKey)) {
+            $this->cache->set($cacheKey, $result);
+        }
+
+        return $result;
+    }
+
+    public function setLifetime(int $lifetime): MagentoApiClient
+    {
+        if ($this->cache === null) {
+            return $this;
+        }
+
+        $this->cache->setLifetime($lifetime);
+
+        return $this;
     }
 
     protected function getUrl(string $url, array $params): string
@@ -150,5 +178,10 @@ class MagentoApiClient
             }
         }
         return implode('&', $return);
+    }
+
+    protected function canCache(string $method): bool
+    {
+        return strtoupper($method) === 'GET' && $this->cache !== null;
     }
 }

@@ -30,6 +30,20 @@ $client = new \Magentix\MagentoApiClient\MagentoApiClient(
 );
 ```
 
+## Cache
+
+```php
+$cache = new MagentoApiCache(3600, __DIR__ . DIRECTORY_SEPARATOR . 'api_cache');
+
+$client = new \Magentix\MagentoApiClient\MagentoApiClient(
+    $consumerKey,
+    $consumerSecret,
+    $accessToken,
+    $accessTokenSecret,
+    $cache
+);
+```
+
 ### GET
 
 ```php
