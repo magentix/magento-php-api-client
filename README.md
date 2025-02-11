@@ -32,10 +32,12 @@ $client = new \Magentix\MagentoApiClient\MagentoApiClient(
 
 ## Cache
 
+A cache is available for GET requests.
+
 ```php
 $cache = new \Magentix\MagentoApiClient\MagentoApiCache(
-    3600,
-    __DIR__ . DIRECTORY_SEPARATOR . 'api_cache'
+    3600, // Default lifetime in second
+    __DIR__ . DIRECTORY_SEPARATOR . 'api_cache' // The cache file directory path
 );
 
 $client = new \Magentix\MagentoApiClient\MagentoApiClient(
@@ -45,6 +47,18 @@ $client = new \Magentix\MagentoApiClient\MagentoApiClient(
     $accessTokenSecret,
     $cache
 );
+```
+
+The cache lifetime can be specific depending on the requests.
+
+```php
+$url = 'XXX';
+$client->setLifetime(60); // The next request will be cached for 60s
+$client->get($url);
+
+$url = 'YYY';
+$client->setLifetime(300); // The next request will be cached for 300s
+$client->get($url);
 ```
 
 ### GET
