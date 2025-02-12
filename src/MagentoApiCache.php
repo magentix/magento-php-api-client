@@ -50,7 +50,21 @@ class MagentoApiCache implements Cache
      */
     public function set(string $key, mixed $data): MagentoApiCache
     {
-        $this->data[$key] = ['time' => time(), 'lifetime' => $this->lifetime, 'data' => serialize($data)];
+        $this->data[$key] = $this->value($data);
+
+        $this->persist();
+
+        return $this;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function bulk(array $data): MagentoApiCache
+    {
+        foreach ($data as $key => $item) {
+            $this->data[$key] = $this->value($item);
+        }
 
         $this->persist();
 
@@ -197,6 +211,11 @@ class MagentoApiCache implements Cache
     public function getLifetime(): int
     {
         return $this->lifetime;
+    }
+
+    private function value(mixed $data): array
+    {
+        return ['time' => time(), 'lifetime' => $this->lifetime, 'data' => serialize($data)];
     }
 
     /**
