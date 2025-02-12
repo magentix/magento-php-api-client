@@ -212,12 +212,12 @@ class MagentoApiCache implements Cache
      */
     private function load(): void
     {
-        $file = $this->getCacheFile();
-        if (!file_exists($file)) {
-            return;
-        }
+        $this->data = [];
 
-        $this->data = json_decode(file_get_contents($file), true) ?: [];
+        $file = $this->getCacheFile();
+        if (file_exists($file)) {
+            $this->data = json_decode(file_get_contents($file), true) ?: [];
+        }
     }
 
     private function isExpired(string $key): bool
