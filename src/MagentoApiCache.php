@@ -204,7 +204,7 @@ class MagentoApiCache implements Cache
      */
     private function persist(): void
     {
-        file_put_contents($this->getCacheFile(), json_encode($this->data));
+        file_put_contents($this->getCacheFile(), json_encode($this->data, JSON_PRETTY_PRINT));
     }
 
     /**
