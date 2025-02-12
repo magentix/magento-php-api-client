@@ -49,15 +49,17 @@ $client = new \Magentix\MagentoApiClient\MagentoApiClient(
 );
 ```
 
-The cache lifetime can be specific depending on the requests.
+The cache lifetime and name can be specific depending on the requests.
 
 ```php
 $url = 'XXX';
-$client->setLifetime(60); // The next request will be cached for 60s
+$client->getCache()->setLifetime(60); // The next request will be cached for 60s
+$client->getCache()->setCacheName('product'); // The next request will be cached in product.cache file
 $client->get($url);
 
 $url = 'YYY';
-$client->setLifetime(300); // The next request will be cached for 300s
+$client->getCache()->setLifetime(300); // The next request will be cached for 300s
+$client->getCache()->setCacheName('category'); // The next request will be cached in category.cache file
 $client->get($url);
 ```
 

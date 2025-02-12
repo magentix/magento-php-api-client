@@ -31,14 +31,18 @@ use Magentix\MagentoApiClient\Interface\Cache;
 
 class MagentoApiCache implements Cache
 {
-    private ?array $data = null;
-    
+    private array $data = [];
+
+    /**
+     * @throws Exception
+     */
     public function __construct(
         private int $lifetime = 3600,
         private string $cachePath = 'cache',
         private string $cacheName = 'default',
         private string $extension = '.cache'
     ) {
+        $this->load();
     }
 
     /**
@@ -46,18 +50,9 @@ class MagentoApiCache implements Cache
      */
     public function set(string $key, mixed $data): MagentoApiCache
     {
-        $storeData = [
-            'time' => time(),
-            'expire' => $this->lifetime,
-            'data' => serialize($data)
-        ];
+        $this->data[$key] = ['time' => time(), 'lifetime' => $this->lifetime, 'data' => serialize($data)];
 
-        $data = $this->load(true);
-        $data[$key] = $storeData;
-
-        $cacheData = json_encode($data);
-
-        file_put_contents($this->getCacheFile(), $cacheData);
+        $this->persist();
 
         return $this;
     }
@@ -67,48 +62,21 @@ class MagentoApiCache implements Cache
      */
     public function get(string $key): mixed
     {
-        $this->cleanByKey($key);
-
-        if (!$this->isCached($key)) {
+        if (!$this->cleanByKey($key)->isCached($key)) {
             return null;
         }
 
-        $data = $this->load();
-
-        return unserialize($data[$key]['data']);
+        return unserialize($this->data[$key]['data']);
     }
 
-    /**
-     * @throws Exception
-     */
     public function all(): array
     {
-        $results = [];
-        $data = $this->load();
-
-        if (empty($data)) {
-            return $results;
-        }
-
-        foreach ($data as $key => $value) {
-            $results[$key] = unserialize($value['data']);
-        }
-
-        return $results;
+        return array_map(function ($value) { return unserialize($value['data']); }, $this->data);
     }
 
-    /**
-     * @throws Exception
-     */
     public function isCached(string $key): bool
     {
-        $data = $this->load();
-
-        if (empty($data)) {
-            return false;
-        }
-
-        return isset($data[$key]);
+        return isset($this->data[$key]);
     }
 
     /**
@@ -116,21 +84,16 @@ class MagentoApiCache implements Cache
      */
     public function cleanByKey(string $key): MagentoApiCache
     {
-        $data = $this->load();
-
-        if (!isset($data[$key])) {
+        if (!$this->isCached($key)) {
+            return $this;
+        }
+        if (!$this->isExpired($key)) {
             return $this;
         }
 
-        if (!$this->isExpired($data[$key]['time'] ?? 0, $data[$key]['expire'] ?? 0)) {
-            return $this;
-        }
+        unset($this->data[$key]);
 
-        unset($data[$key]);
-
-        $this->data = $data;
-
-        file_put_contents($this->getCacheFile(), json_encode($this->data));
+        $this->persist();
 
         return $this;
     }
@@ -140,22 +103,14 @@ class MagentoApiCache implements Cache
      */
     public function cleanExpired(): MagentoApiCache
     {
-        $data = $this->load();
-
-        if (empty($data)) {
-            return $this;
-        }
-
-        foreach ($data as $key => $entry) {
-            if (!$this->isExpired($entry['time'] ?? 0, $entry['expire'] ?? 0)) {
+        foreach ($this->data as $key => $item) {
+            if (!$this->isExpired($key)) {
                 continue;
             }
-            unset($data[$key]);
+            unset($this->data[$key]);
         }
 
-        $this->data = $data;
-
-        file_put_contents($this->getCacheFile(), json_encode($this->data));
+        $this->persist();
 
         return $this;
     }
@@ -165,14 +120,9 @@ class MagentoApiCache implements Cache
      */
     public function cleanAll(): MagentoApiCache
     {
-        $file = $this->getCacheFile();
+        $this->data = [];
 
-        if (file_exists($file)) {
-            $cacheFile = fopen($file, 'w');
-            fclose($cacheFile);
-        }
-
-        $this->data = null;
+        $this->persist();
 
         return $this;
     }
@@ -182,18 +132,20 @@ class MagentoApiCache implements Cache
      */
     public function getCacheFile(): string
     {
-        if (!$this->checkCacheDir()) {
-            return '';
-        }
+        $this->checkCacheDir();
 
         $filename = preg_replace('/[^0-9a-z._\-]/i', '', strtolower($this->getCacheName()));
 
-        return $this->getCachePath() . sha1($filename) . $this->getExtension();
+        return $this->getCachePath() . $filename . $this->getExtension();
     }
 
+    /**
+     * @throws Exception
+     */
     public function setCachePath(string $path): MagentoApiCache
     {
         $this->cachePath = $path;
+        $this->load();
 
         return $this;
     }
@@ -203,9 +155,13 @@ class MagentoApiCache implements Cache
         return rtrim($this->cachePath, '/\\') . DIRECTORY_SEPARATOR;
     }
 
+    /**
+     * @throws Exception
+     */
     public function setCacheName(string $name): MagentoApiCache
     {
         $this->cacheName = $name;
+        $this->load();
 
         return $this;
     }
@@ -215,9 +171,13 @@ class MagentoApiCache implements Cache
         return $this->cacheName;
     }
 
+    /**
+     * @throws Exception
+     */
     public function setExtension(string $extension): MagentoApiCache
     {
         $this->extension = $extension;
+        $this->load();
 
         return $this;
     }
@@ -233,7 +193,7 @@ class MagentoApiCache implements Cache
 
         return $this;
     }
-    
+
     public function getLifetime(): int
     {
         return $this->lifetime;
@@ -242,28 +202,33 @@ class MagentoApiCache implements Cache
     /**
      * @throws Exception
      */
-    private function load($refresh = false): array
+    private function persist(): void
     {
-        if (!$refresh && $this->data !== null) {
-            return $this->data;
-        }
+        file_put_contents($this->getCacheFile(), json_encode($this->data));
+    }
 
+    /**
+     * @throws Exception
+     */
+    private function load(): void
+    {
         $file = $this->getCacheFile();
         if (!file_exists($file)) {
-            return [];
+            return;
         }
 
         $this->data = json_decode(file_get_contents($file), true) ?: [];
-
-        return $this->data;
     }
 
-    private function isExpired(int $timestamp, int $lifetime): bool
+    private function isExpired(string $key): bool
     {
-        if ($lifetime === 0) {
+        if (!$this->isCached($key)) {
             return true;
         }
-        if (time() - $timestamp > $lifetime) {
+        if ($this->data[$key]['lifetime'] === 0) {
+            return true;
+        }
+        if (time() - $this->data[$key]['time'] > $this->data[$key]['lifetime']) {
             return true;
         }
 
@@ -273,7 +238,7 @@ class MagentoApiCache implements Cache
     /**
      * @throws Exception
      */
-    private function checkCacheDir(): bool
+    private function checkCacheDir(): void
     {
         if (!is_dir($this->getCachePath()) && !mkdir($this->getCachePath(), 0775, true)) {
             throw new Exception('Unable to create cache directory ' . $this->getCachePath());
@@ -281,10 +246,8 @@ class MagentoApiCache implements Cache
 
         if (!is_readable($this->getCachePath()) || !is_writable($this->getCachePath())) {
             if (!chmod($this->getCachePath(), 0775)) {
-                throw new Exception($this->getCachePath() . ' must be readable and writeable');
+                throw new Exception($this->getCachePath() . ' must be readable and writable');
             }
         }
-
-        return true;
     }
 }

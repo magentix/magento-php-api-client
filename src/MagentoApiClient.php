@@ -109,15 +109,9 @@ class MagentoApiClient
         return $result;
     }
 
-    public function setLifetime(int $lifetime): MagentoApiClient
+    public function getCache(): ?Cache
     {
-        if ($this->cache === null) {
-            return $this;
-        }
-
-        $this->cache->setLifetime($lifetime);
-
-        return $this;
+        return $this->cache;
     }
 
     protected function getUrl(string $url, array $params): string

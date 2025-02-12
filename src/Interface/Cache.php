@@ -31,6 +31,4 @@ interface Cache
     public function set(string $key, mixed $data): Cache;
 
     public function get(string $key): mixed;
-
-    public function setLifetime(int $lifetime): Cache;
 }
