@@ -50,6 +50,10 @@ class MagentoApiCache implements Cache
      */
     public function set(string $key, mixed $data): MagentoApiCache
     {
+        if (!$this->canCache()) {
+            return $this;
+        }
+
         $this->data[$key] = $this->value($data);
 
         $this->persist();
@@ -62,6 +66,10 @@ class MagentoApiCache implements Cache
      */
     public function bulk(array $data): MagentoApiCache
     {
+        if (!$this->canCache()) {
+            return $this;
+        }
+
         foreach ($data as $key => $item) {
             $this->data[$key] = $this->value($item);
         }
@@ -213,15 +221,15 @@ class MagentoApiCache implements Cache
         return $this->lifetime;
     }
 
-    private function value(mixed $data): array
+    public function canCache(): bool
     {
-        return ['time' => time(), 'lifetime' => $this->lifetime, 'data' => serialize($data)];
+        return $this->getLifetime() > 0;
     }
 
     /**
      * @throws Exception
      */
-    private function persist(): void
+    protected function persist(): void
     {
         file_put_contents($this->getCacheFile(), json_encode($this->data, JSON_PRETTY_PRINT));
     }
@@ -229,7 +237,7 @@ class MagentoApiCache implements Cache
     /**
      * @throws Exception
      */
-    private function load(): void
+    protected function load(): void
     {
         $this->data = [];
 
@@ -239,12 +247,12 @@ class MagentoApiCache implements Cache
         }
     }
 
-    private function isExpired(string $key): bool
+    protected function isExpired(string $key): bool
     {
         if (!$this->isCached($key)) {
             return true;
         }
-        if ($this->data[$key]['lifetime'] === 0) {
+        if ($this->data[$key]['lifetime'] <= 0) {
             return true;
         }
         if (time() - $this->data[$key]['time'] > $this->data[$key]['lifetime']) {
@@ -252,6 +260,11 @@ class MagentoApiCache implements Cache
         }
 
         return false;
+    }
+
+    protected function value(mixed $data): array
+    {
+        return ['time' => time(), 'lifetime' => $this->getLifetime(), 'data' => serialize($data)];
     }
 
     /**
