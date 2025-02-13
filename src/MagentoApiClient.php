@@ -102,7 +102,7 @@ class MagentoApiClient
             'result' => is_array($data) ? $data : $response,
         ];
 
-        if ($this->canCache($method, $result) && isset($cacheKey)) {
+        if (!$result['error'] && $this->canCache($method) && isset($cacheKey)) {
             $this->cache->set($cacheKey, $result);
         }
 
@@ -174,8 +174,8 @@ class MagentoApiClient
         return implode('&', $return);
     }
 
-    protected function canCache(string $method, array $result): bool
+    protected function canCache(string $method): bool
     {
-        return $this->cache !== null && strtoupper($method) === 'GET' && !($result['error'] ?? true);
+        return $this->cache !== null && strtoupper($method) === 'GET';
     }
 }
