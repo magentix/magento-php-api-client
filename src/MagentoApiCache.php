@@ -272,6 +272,10 @@ class MagentoApiCache implements Cache
      */
     private function checkCacheDir(): void
     {
+        if (!$this->canCache()) {
+            return;
+        }
+
         if (!is_dir($this->getCachePath()) && !mkdir($this->getCachePath(), 0775, true)) {
             throw new Exception('Unable to create cache directory ' . $this->getCachePath());
         }
