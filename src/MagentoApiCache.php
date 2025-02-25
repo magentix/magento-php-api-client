@@ -276,12 +276,12 @@ class MagentoApiCache implements Cache
             return;
         }
 
-        if (!is_dir($this->getCachePath()) && !mkdir($this->getCachePath(), 0770, true)) {
+        if (!is_dir($this->getCachePath()) && !mkdir($this->getCachePath(), 0775, true)) {
             throw new Exception('Unable to create cache directory ' . $this->getCachePath());
         }
 
         if (!is_readable($this->getCachePath()) || !is_writable($this->getCachePath())) {
-            if (!chmod($this->getCachePath(), 0770)) {
+            if (!chmod($this->getCachePath(), 0775)) {
                 throw new Exception($this->getCachePath() . ' must be readable and writable');
             }
         }
