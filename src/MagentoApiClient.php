@@ -138,7 +138,7 @@ class MagentoApiClient
             }
         }
 
-        $base = [$method, $this->urlEncode($url), $this->urlencode($this->toByteValueOrderedQueryString($oauth))];
+        $base = [$method, $this->urlEncode($this->normalizeUrl($url)), $this->urlencode($this->toByteValueOrderedQueryString($oauth))];
 
         $oauth['oauth_signature'] = base64_encode(
             hash_hmac('SHA256', implode('&', $base), $this->consumerSecret . '&' . $this->accessTokenSecret, true)
@@ -150,6 +150,29 @@ class MagentoApiClient
     protected function getNonce(): string
     {
         return md5(uniqid((string)rand(), true));
+    }
+
+    protected function normalizeUrl(string $url): string
+    {
+        $parts = parse_url($url);
+        if (isset($parts['path'])) {
+            $parts['path'] = preg_replace_callback(
+                '/%([0-9A-Fa-f]{2})/',
+                function (array $match): string {
+                    $char = rawurldecode('%' . $match[1]);
+                    if (preg_match('/^[A-Za-z0-9\-._~:@&=+$,\/;%]$/', $char)) {
+                        return $char;
+                    }
+                    return strtoupper('%' . $match[1]);
+                },
+                $parts['path']
+            );
+        }
+
+        return (isset($parts['scheme']) ? $parts['scheme'] . '://' : '')
+            . ($parts['host'] ?? '')
+            . (isset($parts['port']) ? ':' . $parts['port'] : '')
+            . ($parts['path'] ?? '');
     }
 
     protected function urlEncode($value): string
