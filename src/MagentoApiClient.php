@@ -160,7 +160,7 @@ class MagentoApiClient
                 '/%([0-9A-Fa-f]{2})/',
                 function (array $match): string {
                     $char = rawurldecode('%' . $match[1]);
-                    if (preg_match('/^[A-Za-z0-9\-._~:@&=+$,\/;%]$/', $char)) {
+                    if (preg_match('/^[A-Za-z0-9\-._~]$/', $char)) {
                         return $char;
                     }
                     return strtoupper('%' . $match[1]);
