@@ -2,7 +2,7 @@
 /**
  * MIT License
  *
- * Copyright (c) 2025 Magentix
+ * Copyright (c) 2026 Magentix
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,29 @@ use Magentix\MagentoApiClient\Interface\Cache;
 
 class MagentoApiCache implements Cache
 {
+    public const KEY_DATA = 'data';
+
+    public const KEY_LIFETIME = 'lifetime';
+
+    public const KEY_TIME = 'time';
+
     private array $data = [];
+
+    private string $cachePath;
+
+    private string $cacheName;
 
     /**
      * @throws Exception
      */
     public function __construct(
         private int $lifetime = 3600,
-        private string $cachePath = 'cache',
-        private string $cacheName = 'default',
+        string $cachePath = 'cache',
+        string $cacheName = 'default',
         private string $extension = '.cache'
     ) {
-        $this->load();
+        $this->setCacheDir($cachePath);
+        $this->setCacheFile($cacheName);
     }
 
     /**
@@ -88,12 +99,12 @@ class MagentoApiCache implements Cache
             return null;
         }
 
-        return unserialize($this->data[$key]['data']);
+        return unserialize($this->data[$key][self::KEY_DATA]);
     }
 
     public function all(): array
     {
-        return array_map(function ($value) { return unserialize($value['data']); }, $this->data);
+        return array_map(function ($value) { return unserialize($value[self::KEY_DATA]); }, $this->data);
     }
 
     public function isCached(string $key): bool
@@ -106,10 +117,7 @@ class MagentoApiCache implements Cache
      */
     public function cleanByKey(string $key): MagentoApiCache
     {
-        if (!$this->isCached($key)) {
-            return $this;
-        }
-        if (!$this->isExpired($key)) {
+        if (!$this->isCached($key) || !$this->isExpired($key)) {
             return $this;
         }
 
@@ -152,43 +160,44 @@ class MagentoApiCache implements Cache
     /**
      * @throws Exception
      */
-    public function getCacheFile(): string
+    public function getCachePath(): string
     {
         $this->checkCacheDir();
 
-        $filename = preg_replace('/[^0-9a-z._\-]/i', '', strtolower($this->getCacheName()));
-
-        return $this->getCachePath() . $filename . $this->getExtension();
+        return $this->getCacheDir() . $this->getCacheFile() . $this->getExtension();
     }
 
     /**
      * @throws Exception
      */
-    public function setCachePath(string $path): MagentoApiCache
+    public function setCacheDir(string $path): MagentoApiCache
     {
-        $this->cachePath = $path;
-        $this->load();
+        $path = preg_replace('/[\/\\\\]/', DIRECTORY_SEPARATOR, $path);
+        $this->cachePath = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        if (isset($this->cacheName)) {
+            $this->load();
+        }
 
         return $this;
     }
 
-    public function getCachePath(): string
+    public function getCacheDir(): string
     {
-        return rtrim($this->cachePath, '/\\') . DIRECTORY_SEPARATOR;
+        return $this->cachePath;
     }
 
     /**
      * @throws Exception
      */
-    public function setCacheName(string $name): MagentoApiCache
+    public function setCacheFile(string $name): MagentoApiCache
     {
-        $this->cacheName = $name;
+        $this->cacheName = preg_replace('/[^0-9a-zA-Z.]/', '-', $name);
         $this->load();
 
         return $this;
     }
 
-    public function getCacheName(): string
+    public function getCacheFile(): string
     {
         return $this->cacheName;
     }
@@ -231,7 +240,13 @@ class MagentoApiCache implements Cache
      */
     protected function persist(): void
     {
-        file_put_contents($this->getCacheFile(), json_encode($this->data, JSON_PRETTY_PRINT));
+        if (!is_dir($this->getCacheDir())) {
+            return;
+        }
+
+        if (file_put_contents($this->getCachePath(), json_encode($this->data, JSON_PRETTY_PRINT)) === false) {
+            throw new Exception('Unable to write cache file ' . $this->getCachePath());
+        }
     }
 
     /**
@@ -241,7 +256,7 @@ class MagentoApiCache implements Cache
     {
         $this->data = [];
 
-        $file = $this->getCacheFile();
+        $file = $this->getCachePath();
         if (file_exists($file)) {
             $this->data = json_decode(file_get_contents($file), true) ?: [];
         }
@@ -252,10 +267,10 @@ class MagentoApiCache implements Cache
         if (!$this->isCached($key)) {
             return true;
         }
-        if ($this->data[$key]['lifetime'] <= 0) {
+        if ($this->data[$key][self::KEY_LIFETIME] <= 0) {
             return true;
         }
-        if (time() - $this->data[$key]['time'] > $this->data[$key]['lifetime']) {
+        if (time() - $this->data[$key][self::KEY_TIME] > $this->data[$key][self::KEY_LIFETIME]) {
             return true;
         }
 
@@ -264,7 +279,11 @@ class MagentoApiCache implements Cache
 
     protected function value(mixed $data): array
     {
-        return ['time' => time(), 'lifetime' => $this->getLifetime(), 'data' => serialize($data)];
+        return [
+            self::KEY_TIME => time(),
+            self::KEY_LIFETIME => $this->getLifetime(),
+            self::KEY_DATA => serialize($data),
+        ];
     }
 
     /**
@@ -276,13 +295,13 @@ class MagentoApiCache implements Cache
             return;
         }
 
-        if (!is_dir($this->getCachePath()) && !mkdir($this->getCachePath(), 0775, true)) {
-            throw new Exception('Unable to create cache directory ' . $this->getCachePath());
+        if (!is_dir($this->getCacheDir()) && !mkdir($this->getCacheDir(), 0775, true)) {
+            throw new Exception('Unable to create cache directory ' . $this->getCacheDir());
         }
 
-        if (!is_readable($this->getCachePath()) || !is_writable($this->getCachePath())) {
-            if (!chmod($this->getCachePath(), 0775)) {
-                throw new Exception($this->getCachePath() . ' must be readable and writable');
+        if (!is_readable($this->getCacheDir()) || !is_writable($this->getCacheDir())) {
+            if (!chmod($this->getCacheDir(), 0775)) {
+                throw new Exception($this->getCacheDir() . ' must be readable and writable');
             }
         }
     }
