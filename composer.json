@@ -6,9 +6,17 @@
     "ext-curl": "*",
     "ext-json": "*"
   },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
   "autoload": {
     "psr-4": {
       "Magentix\\MagentoApiClient\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Magentix\\MagentoApiClient\\Tests\\": "tests/"
     }
   },
   "authors": [
